@@ -9,3 +9,4 @@ parts
 *.egg-info
 src
 develop-eggs
+dist
