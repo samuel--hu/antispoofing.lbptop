@@ -24,7 +24,7 @@ def main():
   basedir = os.path.dirname(os.path.dirname(os.path.realpath(sys.argv[0])))
 
   INPUT_DIR = os.path.join(basedir, 'database')
-  OUTPUT_DIR = os.path.join(basedir, 'lbp_features')
+  OUTPUT_DIR = os.path.join(basedir, 'lbptop_features')
 
   ##########
   # General configuration
@@ -65,6 +65,12 @@ def main():
   parser.add_argument('-cXY', '--circularXY', action='store_true', default=False, dest='cXY', help='Is circular neighborhood in XY plane?  (defaults to "%(default)s")')
   parser.add_argument('-cXT', '--circularXT', action='store_true', default=False, dest='cXT', help='Is circular neighborhood in XT plane?  (defaults to "%(default)s")')
   parser.add_argument('-cYT', '--circularYT', action='store_true', default=False, dest='cYT', help='Is circular neighborhood in YT plane?  (defaults to "%(default)s")')
+
+  parser.add_argument('-sC', '--saveConcat', action='store_true', default=False, dest='sC', help='If True, will create the feature vector out of the concatenated histograms and save it. If False, saves each of the three histograms (XY, XT and YT) in a separate plane in a numpy.array  (defaults to "%(default)s")')
+  
+  parser.add_argument('-sI', '--saveIndividually', action='store_true', default=False, dest='sI', help='If True, will save the feature vectors for each plane individually in separate directories (defaults to "%(default)s")')
+  
+  parser.add_argument('-e', '--enrollment', action='store_true', default=False, dest='enrollment', help='If True, will do the processing of the enrollment data of the database (defaults to "%(default)s")')
 
   # For SGE grid processing @ Idiap
   parser.add_argument('--grid', dest='grid', action='store_true', default=False, help=argparse.SUPPRESS)
@@ -112,10 +118,13 @@ def main():
   ########################
   #Querying the database
   ########################
-  #database = new_database(databaseName,args=args)
   database = args.cls(args)
-  realObjects, attackObjects = database.get_all_data()
-  process = realObjects + attackObjects 
+  
+  if args.enrollment:  
+    process = database.get_enroll_data()
+  else:  
+    realObjects, attackObjects = database.get_all_data()
+    process = realObjects + attackObjects 
 
   # finally, if we are on a grid environment, just find what I have to process.
   if args.grid:
@@ -183,11 +192,11 @@ def main():
 
         #Calculating the histograms           
         histXY,histXT,histYT = spoof.lbptophist(normalizedVolume,nXY,nXT,nYT,rX,rY,r,cXY,cXT,cYT,lbptypeXY,lbptypeXT,lbptypeYT,elbptypeXY,elbptypeXT,elbptypeYT)
-
+        
 	#Concatenating in columns
         if(histLocalVolumeXY == None):
-	  histLocalVolumeXY = histXY
-	  histLocalVolumeXT = histXT
+          histLocalVolumeXY = histXY
+          histLocalVolumeXT = histXT
           histLocalVolumeYT = histYT
         else:
           #Is no necessary concatenate more elements in space with diferent radius in type
@@ -208,7 +217,7 @@ def main():
    
     #In the LBP we lose the R_t first and R_t last frames. For that reason, 
     #we need to add nan first and last R_t frames
-  
+    
     maxrT = max(rT)    
     nanParametersXY = numpy.ones(shape=(maxrT,histVolumeXY.shape[1]))*numpy.NaN
     nanParametersXT = numpy.ones(shape=(maxrT,histVolumeXT.shape[1]))*numpy.NaN
@@ -238,12 +247,21 @@ def main():
     histData[2,:,0:dims[0][1]] = histVolumeXT
     histData[3,:,0:dims[0][2]] = histVolumeYT
 
-
     sys.stdout.write('\n')
     sys.stdout.flush()
 
     # saves the output
-    obj.save(histData,directory=directory,extension='.hdf5')
+    
+    if args.sI == True:
+      obj.save(histVolumeXY, directory=os.path.join(directory, 'XY'), extension='.hdf5')
+      obj.save(histVolumeXT, directory=os.path.join(directory, 'XT'), extension='.hdf5')
+      obj.save(histVolumeYT, directory=os.path.join(directory, 'YT'), extension='.hdf5')
+    else:
+      if args.sC == True:
+        histDataConcat = numpy.hstack((histVolumeXY, histVolumeXT, histVolumeYT))
+        obj.save(histDataConcat,directory=directory,extension='.hdf5')  
+      else:
+        obj.save(histData,directory=directory,extension='.hdf5')
   
 
   return 0
