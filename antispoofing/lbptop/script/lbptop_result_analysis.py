@@ -79,7 +79,6 @@ def main():
   if not os.path.exists(outputDir): # if the output directory doesn't exist, create it
     bob.db.utils.makedirs_safe(outputDir)
 
-
   #########
   # Loading some dataset
   #########
@@ -141,7 +140,6 @@ def main():
 
     if(verbose):
       print(models[i])
-
 
     #Getting the scores
     realScores   = ScoreReader(trainReal,scoresPlaneDir)
