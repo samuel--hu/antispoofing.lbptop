@@ -22,7 +22,7 @@ setup(
     include_package_data = True,
 
     install_requires=[
-        "bob >= 1.1.0",      # base signal proc./machine learning library
+        "bob >= 1.1.0, <1.2.0",      # base signal proc./machine learning library
         "xbob.db.replay", # Replay-Attack database
         "xbob.db.casia_fasd", #CASIA database
         "antispoofing.utils",  #Utils Package
