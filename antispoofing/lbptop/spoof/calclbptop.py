@@ -152,7 +152,7 @@ def getNormFacesFromRange(grayFrameSequence,rangeValues,locations,sz):
 """
 def lbptophist(grayFaceNormFrameSequence,nXY,nXT,nYT,rX,rY,rT,cXY,cXT,cYT,lbptypeXY,lbptypeXT,lbptypeYT,elbptypeXY,elbptypeXT,elbptypeYT,histrogramOutput=True):
   
-  elbps = {'regular':0, 'transitional':1, 'direction_coded':2, 'modified':0}
+  elbps = {'regular':bob.ip.ELBPType.REGULAR, 'transitional':bob.ip.ELBPType.TRANSITIONAL, 'direction_coded':bob.ip.ELBPType.DIRECTION_CODED, 'modified':bob.ip.ELBPType.REGULAR}
 
   uniformXY = False
   riu2XY    = False
@@ -204,37 +204,37 @@ def lbptophist(grayFaceNormFrameSequence,nXY,nXT,nYT,rX,rY,rT,cXY,cXT,cYT,lbptyp
   lbp_YT = 0
   #XY
   if(nXY==4):
-    lbp_XY = bob.ip.LBP4R(radius=rX, circular=cXY, uniform=uniformXY, rotation_invariant=riu2XY, to_average=mctXY, elbp_type=elbps[elbptypeXY])
+    lbp_XY = bob.ip.LBP(neighbors = 4, radius=rX, circular=cXY, uniform=uniformXY, rotation_invariant=riu2XY, to_average=mctXY, elbp_type=elbps[elbptypeXY])
     lbp_XY.radius2 = rY
   elif(nXY==8):
-    lbp_XY = bob.ip.LBP8R(radius=rX, circular=cXY, uniform=uniformXY, rotation_invariant=riu2XY, to_average=mctXY,elbp_type=elbps[elbptypeXY])
+    lbp_XY = bob.ip.LBP(neighbors = 8, radius=rX, circular=cXY, uniform=uniformXY, rotation_invariant=riu2XY, to_average=mctXY,elbp_type=elbps[elbptypeXY])
     lbp_XY.radius2 = rY
   elif(nXY==16):
-    lbp_XY = bob.ip.LBP16R(radius=rX, circular=cXY, uniform=uniformXY, rotation_invariant=riu2XY, to_average=mctXY,elbp_type=elbps[elbptypeXY])
+    lbp_XY = bob.ip.LBP(neighbors = 16, radius=rX, circular=cXY, uniform=uniformXY, rotation_invariant=riu2XY, to_average=mctXY,elbp_type=elbps[elbptypeXY])
     lbp_XY.radius2 = rY
 
 
   #XT
   if(nXT==4):
-    lbp_XT = bob.ip.LBP4R(radius=rX, circular=cXT, uniform=uniformXT, rotation_invariant=riu2XT, to_average=mctXT, elbp_type=elbps[elbptypeXT])
+    lbp_XT = bob.ip.LBP(neighbors = 4, radius=rX, circular=cXT, uniform=uniformXT, rotation_invariant=riu2XT, to_average=mctXT, elbp_type=elbps[elbptypeXT])
     lbp_XT.radius2 = rT
   elif(nXT==8):
-    lbp_XT = bob.ip.LBP8R(radius=rX, circular=cXT, uniform=uniformXT, rotation_invariant=riu2XT, to_average=mctXT,elbp_type=elbps[elbptypeXT])
+    lbp_XT = bob.ip.LBP(neighbors = 8, radius=rX, circular=cXT, uniform=uniformXT, rotation_invariant=riu2XT, to_average=mctXT,elbp_type=elbps[elbptypeXT])
     lbp_XT.radius2 = rT
   elif(nXT==16):
-    lbp_XT = bob.ip.LBP16R(radius=rX, circular=cXT, uniform=uniformXT, rotation_invariant=riu2XT, to_average=mctXT,elbp_type=elbps[elbptypeXT])
+    lbp_XT = bob.ip.LBP(neighbors = 16, radius=rX, circular=cXT, uniform=uniformXT, rotation_invariant=riu2XT, to_average=mctXT,elbp_type=elbps[elbptypeXT])
     lbp_XT.radius2 = rT
 
 
   #YT
   if(nYT==4):
-    lbp_YT = bob.ip.LBP4R(radius=rY, circular=cYT, uniform=uniformYT, rotation_invariant=riu2YT, to_average=mctYT,elbp_type=elbps[elbptypeYT])
+    lbp_YT = bob.ip.LBP(neighbors = 4, radius=rY, circular=cYT, uniform=uniformYT, rotation_invariant=riu2YT, to_average=mctYT,elbp_type=elbps[elbptypeYT])
     lbp_YT.radius2 = rT
   elif(nYT==8):
-    lbp_YT = bob.ip.LBP8R(radius=rY, circular=cYT, uniform=uniformYT, rotation_invariant=riu2YT, to_average=mctYT,elbp_type=elbps[elbptypeYT])
+    lbp_YT = bob.ip.LBP(neighbors = 8, radius=rY, circular=cYT, uniform=uniformYT, rotation_invariant=riu2YT, to_average=mctYT,elbp_type=elbps[elbptypeYT])
     lbp_YT.radius2 = rT
   elif(nYT==16):
-    lbp_YT = bob.ip.LBP16R(radius=rY, circular=cYT, uniform=uniformYT, rotation_invariant=riu2YT, to_average=mctYT,elbp_type=elbps[elbptypeYT])
+    lbp_YT = bob.ip.LBP(neighbors = 16, radius=rY, circular=cYT, uniform=uniformYT, rotation_invariant=riu2YT, to_average=mctYT,elbp_type=elbps[elbptypeYT])
     lbp_YT.radius2 = rT
 
 
