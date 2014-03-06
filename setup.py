@@ -9,7 +9,7 @@ from setuptools import setup, find_packages
 setup(
 
     name='antispoofing.lbptop',
-    version='1.0.3',
+    version='1.0.4',
     description='LBP-TOP based countermeasure against facial spoofing attacks',
     url='http://pypi.python.org/pypi/antispoofing.lbptop',
     license='GPLv3',
@@ -23,9 +23,9 @@ setup(
 
     install_requires=[
         "bob >= 1.2.0",      # base signal proc./machine learning library
-        "xbob.db.replay", # Replay-Attack database
-        "xbob.db.casia_fasd", #CASIA database
-        "antispoofing.utils",  #Utils Package
+        "xbob.db.replay >= 1.0.4", # Replay-Attack database
+        "xbob.db.casia_fasd >= 1.1.0", #CASIA database
+        "antispoofing.utils >= 1.1.3",  #Utils Package
     ],
 
     namespace_packages = [
