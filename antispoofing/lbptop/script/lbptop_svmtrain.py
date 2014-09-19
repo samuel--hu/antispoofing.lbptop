@@ -67,7 +67,8 @@ def main():
   normalize     = args.normalize
   pca_reduction = args.pca_reduction
   
-  models = ['XY-plane','XT-Plane','YT-Plane','XT-YT-Plane','XY-XT-YT-plane']
+  #models = ['XY-plane','XT-Plane','YT-Plane','XT-YT-Plane','XY-XT-YT-plane']
+  models = ['XY-XT-YT-plane','XY-plane','XT-Plane','YT-Plane','XT-YT-Plane']
   lines  = ['r','b','y','g^','c']
 
   #Normalization lowbound and highbound
