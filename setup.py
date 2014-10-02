@@ -42,7 +42,12 @@ setup(
         'lbptop_result_analysis.py = antispoofing.lbptop.script.lbptop_result_analysis:main',
         'lbptop_svmtrain.py  = antispoofing.lbptop.script.lbptop_svmtrain:main',
         ],
-      },
+
+    # declare tests to bob
+    'bob.test': [
+     'voxforge = antispoofing.lbptop.test:lbptopTest',
+      ],
+     },
 
     classifiers = [
       'Development Status :: 5 - Production/Stable',

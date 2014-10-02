@@ -120,17 +120,16 @@ def main():
     dataset = calclbptop.create_full_dataset([obj],featuresDir,retrieveNanLines=True)
     featureVector = dataset[helpers.getPlaneIndex(planeName)]
 
-    #Loaging the normalization file for the min,max normalization
-    if(normalizationFile != ''):
-      [lowbound,highbound,mins,maxs] = readNormalizationData(normalizationFile)
-      featureVector                  = norm.norm_range(featureVector, mins, maxs, lowbound, highbound)
-
-    #Loading the PCA machine
-    #import ipdb; ipdb.set_trace()
+     #Loading the PCA machine
     if(pcaFile != ''):
       hdf5File_pca    = bob.io.HDF5File(pcaFile,openmode_string='r')
       pcaMachine      = bob.machine.LinearMachine(hdf5File_pca)
       featureVector   = pca.pcareduce(pcaMachine, featureVector);
+
+    #Loaging the normalization file for the min,max normalization
+    if(normalizationFile != ''):
+      [lowbound,highbound,mins,maxs] = readNormalizationData(normalizationFile)
+      featureVector                  = norm.norm_range(featureVector, mins, maxs, lowbound, highbound)
 
     #Loading the machine
     if(machineType=='Linear'):

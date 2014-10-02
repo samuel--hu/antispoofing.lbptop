@@ -32,8 +32,9 @@ def main():
 
   parser = argparse.ArgumentParser(description=__doc__,
       formatter_class=argparse.RawDescriptionHelpFormatter)
-  parser.add_argument('-i', '--input-dir', metavar='DIR', type=str, dest='inputDir', default=INPUT_DIR, help='Base directory containing the scores to be loaded')
-  parser.add_argument('-o', '--output-dir', metavar='DIR', type=str, dest='outputDir', default=OUTPUT_DIR, help='Base directory that will be used to save the results.')
+  parser.add_argument('input_dir', metavar='DIR', type=str, default=INPUT_DIR, help='Base directory containing the scores to be loaded')
+  parser.add_argument('output_dir', metavar='DIR', type=str, default=OUTPUT_DIR, help='Base directory that will be used to save the results.')
+
   parser.add_argument('-n', '--normalize', action='store_true', dest='normalize', default=False, help='If True, will do zero mean unit variance normalization on the data before creating the LDA machine')
 
   parser.add_argument('-r', '--pca_reduction', action='store_true', dest='pca_reduction', default=False, help='If set, PCA dimensionality reduction will be performed to the data before doing LDA')
@@ -42,8 +43,10 @@ def main():
 
   parser.add_argument('-v', '--verbose', action='store_true', dest='verbose', default=False, help='Increases this script verbosity')
 
-  # For SGE grid processing @ Idiap
-  parser.add_argument('--grid', dest='grid', action='store_true', default=False, help=argparse.SUPPRESS)
+  parser.add_argument('-a', '--all', action='store_true', dest='all_planes', default=False, help='Train the LDA for all planes together')
+
+  parser.add_argument('-s', '--score', dest='score', action='store_true', default=False, help='If set, the final classification scores of all the frames will be dumped in a file')
+
 
   #######
   # Database especific configuration
@@ -55,10 +58,10 @@ def main():
   ###########
   # Loading the parsing variable
   ###########
-
-  inputDir  = args.inputDir
-  outputDir = args.outputDir
-  grid      = args.grid
+  inputDir  = args.input_dir
+  outputDir = args.output_dir
+  score     = args.score
+  
 
   if not os.path.exists(inputDir):
     parser.error("input directory does not exist")
@@ -74,51 +77,97 @@ def main():
   if(verbose):
     print "Loading input files..."
 
+
   ##########################
   # Loading the input files
   ##########################
   database = args.cls(args)
   trainReal, trainAttack = database.get_train_data()
+  devReal, devAttack = database.get_devel_data()
+  testReal, testAttack = database.get_test_data()
 
   # create the full datasets from the file data
-  train_real = calclbptop.create_full_dataset(trainReal,inputDir); train_attack = calclbptop.create_full_dataset(trainAttack,inputDir); 
- 
-  models = ['XY-plane','XT-Plane','YT-Plane','XT-YT-Plane','XY-XT-YT-plane']
-  lines  = ['r','b','y','g^','c']
+  train_real_features = calclbptop.create_full_dataset(trainReal,inputDir); train_attack_features = calclbptop.create_full_dataset(trainAttack,inputDir); 
+  dev_real_features   = calclbptop.create_full_dataset(devReal,inputDir);   dev_attack_features   = calclbptop.create_full_dataset(devAttack,inputDir); 
+  test_real_features  = calclbptop.create_full_dataset(testReal,inputDir);  test_attack_features  = calclbptop.create_full_dataset(testAttack,inputDir); 
 
-  ranges = range(len(models))
-  if grid:
-    pos = int(os.environ['SGE_TASK_ID']) - 1
-    ranges = range(pos,pos+1)
-
-  for i in ranges:
-
-    if(verbose):
-      print("Trainning the " + models[i])
-
-    #### Loading the plane data
-    train_real_plane   = train_real[i]
-    train_attack_plane = train_attack[i]
+  #### Training the counter measures
+  if(verbose):
+    print("Training the LDA machine ... ")
 
 
-    #### Training the counter measures
-    if(verbose):
-      print("Training the LDA machine ... ")
+  [ldaMachine,pcaMachine] = ldaCountermeasure.train(train_real_features, train_attack_features, normalize=normalize, pca_reduction=pca_reduction,energy=energy)
 
-    [ldaMachine,pcaMachine] = ldaCountermeasure.train(train_real_plane, train_attack_plane, normalize=normalize, pca_reduction=pca_reduction,energy=energy)
+  if(verbose):
+    print("Saving the machines")
 
-    if(verbose):
-      print("Saving the machines")
+  #### Saving the machines
+  if(pca_reduction):
+    hdf5File_pca = bob.io.HDF5File(os.path.join(outputDir, 'pca_machine_'+ str(energy) + '.txt'),openmode_string='w')
+    pcaMachine.save(hdf5File_pca)
+    del hdf5File_pca
 
-    #### Saving the machines
-    if(pca_reduction):
-      hdf5File_pca = bob.io.HDF5File(os.path.join(outputDir, 'pca_machine_'+ str(energy) + '-' + models[i] +'.txt'),openmode_string='w')
-      pcaMachine.save(hdf5File_pca)
-      del hdf5File_pca
+  hdf5File_lda = bob.io.HDF5File(os.path.join(outputDir, 'lda_machine_'+ str(energy) + '.txt'),openmode_string='w')
+  ldaMachine.save(hdf5File_lda)
+  del hdf5File_lda
 
-    hdf5File_lda = bob.io.HDF5File(os.path.join(outputDir, 'lda_machine_'+ str(energy) + "-" + models[i] +'.txt'),openmode_string='w')
-    ldaMachine.save(hdf5File_lda)
-    del hdf5File_lda
+  if(pca_reduction):
+    train_real_features   = pca.pcareduce(pcaMachine, train_real_features)
+    train_attack_features = pca.pcareduce(pcaMachine, train_attack_features)
+    dev_real_features     = pca.pcareduce(pcaMachine, dev_real_features)
+    dev_attack_features   = pca.pcareduce(pcaMachine, dev_attack_features)
+    test_real_features    = pca.pcareduce(pcaMachine, test_real_features)
+    test_attack_features  = pca.pcareduce(pcaMachine, test_attack_features)
+
+  train_real_out   = lda.get_scores(ldaMachine, train_real_features)
+  train_attack_out = lda.get_scores(ldaMachine, train_attack_features)
+  dev_real_out     = lda.get_scores(ldaMachine, dev_real_features)
+  dev_attack_out   = lda.get_scores(ldaMachine, dev_attack_features)
+  test_real_out    = lda.get_scores(ldaMachine, test_real_features)
+  test_attack_out  = lda.get_scores(ldaMachine, test_attack_features)
+
+  
+  # it is expected that the scores of the real accesses are always higher then the scores of the attacks. Therefore, a check is first made, if the average of the scores of real accesses is smaller then the average of the scores of the attacks, all the scores are inverted by multiplying with -1.
+  if numpy.mean(dev_real_out) < numpy.mean(dev_attack_out):
+    dev_real_out = dev_real_out * -1; dev_attack_out = dev_attack_out * -1
+    test_real_out = test_real_out * -1; test_attack_out = test_attack_out * -1
+    train_real_out = train_real_out * -1; train_attack_out = train_attack_out * -1
+
+
+  if score: # save the scores in a file
+    score_dir = os.path.join(outputDir, 'scores') # output directory for the socre files
+    calclbptop.map_scores(inputDir, score_dir, trainReal, numpy.reshape(train_real_out, [len(train_real_out), 1])) 
+    calclbptop.map_scores(inputDir, score_dir, trainAttack, numpy.reshape(train_attack_out, [len(train_attack_out), 1]))
+    calclbptop.map_scores(inputDir, score_dir, devReal, numpy.reshape(dev_real_out, [len(dev_real_out), 1]))
+    calclbptop.map_scores(inputDir, score_dir, devAttack, numpy.reshape(dev_attack_out, [len(dev_attack_out), 1]))
+    calclbptop.map_scores(inputDir, score_dir, testReal, numpy.reshape(test_real_out, [len(test_real_out), 1]))
+    calclbptop.map_scores(inputDir, score_dir, testAttack, numpy.reshape(test_attack_out, [len(test_attack_out), 1]))
+
+
+  # calculation of the error rates
+  thres = bob.measure.eer_threshold(dev_attack_out.flatten(), dev_real_out.flatten())
+  dev_far, dev_frr = bob.measure.farfrr(dev_attack_out.flatten(), dev_real_out.flatten(), thres)
+  test_far, test_frr = bob.measure.farfrr(test_attack_out.flatten(), test_real_out.flatten(), thres)
+
+  # writing results to a file
+  tbl = []
+  tbl.append(" ")
+  if args.pca_reduction:
+    tbl.append("EER @devel - energy kept after PCA = %.2f" % (energy))
+  tbl.append(" threshold: %.4f" % thres)
+  tbl.append(" dev:  FAR %.2f%% (%d / %d) | FRR %.2f%% (%d / %d) | HTER %.2f%% " % \
+      (100*dev_far, int(round(dev_far*len(dev_attack_features))), len(dev_attack_features), 
+       100*dev_frr, int(round(dev_frr*len(dev_real_features))), len(dev_real_features),
+       50*(dev_far+dev_frr)))
+  tbl.append(" test: FAR %.2f%% (%d / %d) | FRR %.2f%% (%d / %d) | HTER %.2f%% " % \
+      (100*test_far, int(round(test_far*len(test_attack_features))), len(test_attack_features),
+       100*test_frr, int(round(test_frr*len(test_real_features))), len(test_real_features),
+       50*(test_far+test_frr)))
+  txt = ''.join([k+'\n' for k in tbl])
+  print txt
+
+  
+  
 
  
 if __name__ == '__main__':

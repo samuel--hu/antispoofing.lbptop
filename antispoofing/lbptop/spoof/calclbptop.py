@@ -197,48 +197,24 @@ def lbptophist(grayFaceNormFrameSequence,nXY,nXT,nYT,rX,rY,rT,cXY,cXT,cYT,lbptyp
   if elbptypeYT=='modified': 
     mctYT = True
 
-
   #Creating the LBP operators for each plane
   lbp_XY = 0
   lbp_XT = 0
   lbp_YT = 0
-  #XY
-  if(nXY==4):
-    lbp_XY = bob.ip.LBP(neighbors = 4, radius=rX, circular=cXY, uniform=uniformXY, rotation_invariant=riu2XY, to_average=mctXY, elbp_type=elbps[elbptypeXY])
-    lbp_XY.radius2 = rY
-  elif(nXY==8):
-    lbp_XY = bob.ip.LBP(neighbors = 8, radius=rX, circular=cXY, uniform=uniformXY, rotation_invariant=riu2XY, to_average=mctXY,elbp_type=elbps[elbptypeXY])
-    lbp_XY.radius2 = rY
-  elif(nXY==16):
-    lbp_XY = bob.ip.LBP(neighbors = 16, radius=rX, circular=cXY, uniform=uniformXY, rotation_invariant=riu2XY, to_average=mctXY,elbp_type=elbps[elbptypeXY])
-    lbp_XY.radius2 = rY
 
+  #XY
+  lbp_XY = bob.ip.LBP(neighbors = nXY, radius_x=rX, radius_y=rY, circular=cXY, uniform=uniformXY, rotation_invariant=riu2XY, to_average=mctXY, elbp_type=elbps[elbptypeXY])
+  #lbp_XY.radius2 = rY
 
   #XT
-  if(nXT==4):
-    lbp_XT = bob.ip.LBP(neighbors = 4, radius=rX, circular=cXT, uniform=uniformXT, rotation_invariant=riu2XT, to_average=mctXT, elbp_type=elbps[elbptypeXT])
-    lbp_XT.radius2 = rT
-  elif(nXT==8):
-    lbp_XT = bob.ip.LBP(neighbors = 8, radius=rX, circular=cXT, uniform=uniformXT, rotation_invariant=riu2XT, to_average=mctXT,elbp_type=elbps[elbptypeXT])
-    lbp_XT.radius2 = rT
-  elif(nXT==16):
-    lbp_XT = bob.ip.LBP(neighbors = 16, radius=rX, circular=cXT, uniform=uniformXT, rotation_invariant=riu2XT, to_average=mctXT,elbp_type=elbps[elbptypeXT])
-    lbp_XT.radius2 = rT
-
+  lbp_XT = bob.ip.LBP(neighbors = nXT, radius_x=rT, radius_y=rX, circular=cXT, uniform=uniformXT, rotation_invariant=riu2XT, to_average=mctXT, elbp_type=elbps[elbptypeXT])
+  #lbp_XT.radius2 = rT
 
   #YT
-  if(nYT==4):
-    lbp_YT = bob.ip.LBP(neighbors = 4, radius=rY, circular=cYT, uniform=uniformYT, rotation_invariant=riu2YT, to_average=mctYT,elbp_type=elbps[elbptypeYT])
-    lbp_YT.radius2 = rT
-  elif(nYT==8):
-    lbp_YT = bob.ip.LBP(neighbors = 8, radius=rY, circular=cYT, uniform=uniformYT, rotation_invariant=riu2YT, to_average=mctYT,elbp_type=elbps[elbptypeYT])
-    lbp_YT.radius2 = rT
-  elif(nYT==16):
-    lbp_YT = bob.ip.LBP(neighbors = 16, radius=rY, circular=cYT, uniform=uniformYT, rotation_invariant=riu2YT, to_average=mctYT,elbp_type=elbps[elbptypeYT])
-    lbp_YT.radius2 = rT
+  lbp_YT = bob.ip.LBP(neighbors = nYT, radius_x=rT, radius_y=rY, circular=cYT, uniform=uniformYT, rotation_invariant=riu2YT, to_average=mctYT,elbp_type=elbps[elbptypeYT])
+  #lbp_YT.radius2 = rT
 
-
-  #If the is no face in the volume, returns an nan sequence
+  #If there is no face in the volume, returns an nan sequence
   if(grayFaceNormFrameSequence==None):
     histXY = numpy.zeros(shape=(1,lbp_XY.max_label)) * numpy.NaN
     histXT = numpy.zeros(shape=(1,lbp_XT.max_label)) * numpy.NaN
@@ -250,16 +226,16 @@ def lbptophist(grayFaceNormFrameSequence,nXY,nXT,nYT,rX,rY,rT,cXY,cXT,cYT,lbptyp
   lbpTop = bob.ip.LBPTop(lbp_XY,lbp_XT,lbp_YT)
 
   #Alocating the LBPTop Images
-  max_radius = max(lbp_XY.radius,lbp_XY.radius2,lbp_XT.radius2)
+  max_radius = max(lbp_XY.radii[0],lbp_XY.radii[1],lbp_XT.radii[0])
 
   #Allocating for LBPTOP images
   timeLength = grayFaceNormFrameSequence.shape[0]
-  width   = grayFaceNormFrameSequence.shape[1]
-  height  = grayFaceNormFrameSequence.shape[2]
+  width      = grayFaceNormFrameSequence.shape[1]
+  height     = grayFaceNormFrameSequence.shape[2]
 
-  xy_width  = width-(max_radius*2)
-  xy_height = height-(max_radius*2)
-  tLength   = timeLength-(max_radius*2)
+  xy_width  = width      - (max_radius * 2)
+  xy_height = height     - (max_radius * 2)
+  tLength   = timeLength - (max_radius * 2)
 
 
   #Creating the LBP Images for each direction
@@ -274,11 +250,9 @@ def lbptophist(grayFaceNormFrameSequence,nXY,nXT,nYT,rX,rY,rT,cXY,cXT,cYT,lbptyp
     histYT = numpy.zeros(shape=(YT.shape[0],lbp_YT.max_label)) * numpy.NaN
     return histXY,histXT,histYT 
 
-
   #Calculanting the LBPTop Images
   lbpTop(grayFaceNormFrameSequence,XY,XT,YT)
 
-  
   ### Calculating the histograms
   if(histrogramOutput):
     #XY
@@ -319,72 +293,51 @@ def lbptophist(grayFaceNormFrameSequence,nXY,nXT,nYT,rX,rY,rT,cXY,cXT,cYT,lbptyp
 """
 def create_full_dataset(files,inputDir,retrieveNanLines=False):
   dataset = None
-  dataset_XY = None
-  dataset_XT = None
-  dataset_YT = None
-  dataset_XT_YT = None
-  dataset_XY_XT_YT = None
-
-  dimXY = 0
-  dimXT = 0
-  dimYT = 0
 
   for obj in files:
 
     filename = str(obj.make_path(inputDir,extension='.hdf5'))
     fvs = bob.io.load(filename)
 
-    if dataset_XY is None:
+    if dataset is None:
       #each individual plane
-      dimXY = fvs[0][0][0]
-      dimXT = fvs[0][0][1]
-      dimYT = fvs[0][0][2]
-
-      dataset_XY = numpy.array(fvs[1],copy=True,order='C',dtype='float')
-      dataset_XT = numpy.array(fvs[2],copy=True,order='C',dtype='float')
-      dataset_YT = numpy.array(fvs[3],copy=True,order='C',dtype='float')
-
-      #Reshaping to the correct dimensions
-      dataset_XY = dataset_XY[:,0:dimXY]
-      dataset_XT = dataset_XT[:,0:dimXT]
-      dataset_YT = dataset_YT[:,0:dimYT]
-
-      #combining the temporal planes
-      dataset_XT_YT = numpy.array(numpy.concatenate((dataset_XT,dataset_YT),axis=1),copy=True,order='C',dtype='float')
-
-      #combining the all planes (space + time)
-      dataset_XY_XT_YT = numpy.array(numpy.concatenate((dataset_XY,dataset_XT,dataset_YT),axis=1),copy=True,order='C',dtype='float')
-
+      dataset = fvs
     else:
       #appending each individual plane
-      dataset_XY = numpy.concatenate((dataset_XY, fvs[1,:,0:dimXY]),axis=0)
-      dataset_XT = numpy.concatenate((dataset_XT, fvs[2,:,0:dimXT]),axis=0)
-      dataset_YT = numpy.concatenate((dataset_YT, fvs[3,:,0:dimYT]),axis=0)
-
-      #appending temporal frames
-      item_XT_YT    = numpy.concatenate((fvs[2,:,0:dimXT],fvs[3,:,0:dimYT]),axis=1)
-      dataset_XT_YT = numpy.concatenate((dataset_XT_YT, item_XT_YT),axis=0)
-
-      #appending all frames
-      item_XY_XT_YT    = numpy.concatenate((fvs[1,:,0:dimXY],fvs[2,:,0:dimXT],fvs[3,:,0:dimYT]),axis=1)
-      dataset_XY_XT_YT = numpy.concatenate((dataset_XY_XT_YT,item_XY_XT_YT),axis=0)
- 
-
-
-  dataset = [dataset_XY,dataset_XT,dataset_YT,dataset_XT_YT,dataset_XY_XT_YT]
+      dataset = numpy.concatenate((dataset,fvs),axis=0)
 
   #Will remove the Nan data 
   if(not retrieveNanLines):
-    for i in range(len(dataset)):
-    
-      #selecting the lines with nan
-      data = dataset[i]
+    nanLines = numpy.array([numpy.sum(numpy.isnan(dataset[j,:])) for j in range(dataset.shape[0])])
+    nanLines = numpy.where(nanLines>0)[0]
 
-      nanLines = numpy.array([numpy.sum(numpy.isnan(data[j,:])) for j in range(data.shape[0])])
-      nanLines = numpy.where(nanLines>0)[0]
+    #removing the lines with nan
+    dataset = numpy.delete(dataset,nanLines,axis=0)
 
-      #removing the lines with nan
-      data = numpy.delete(data,nanLines,axis=0)
-      dataset[i] = data
+  return dataset
 
-  return dataset   
+
+def map_scores(indir, score_dir, objects, score_list):
+  """Maps frame scores to frames of the objects. Writes the scores for each frame in a file, NaN for invalid frames
+
+  Keyword parameters:
+
+  indir: the directory with the feature vectors (needed to read which frames are invalid)
+
+  score_dir: the directory where the score files are going to be written
+
+  objects: list of objects
+
+  score_list: list of scores for the given objects
+  """
+  num_scores = 0 # counter for how many valid frames have been processed so far in total of all the objects
+  for obj in objects:
+    filename = os.path.expanduser(obj.make_path(indir, '.hdf5'))
+    feat = bob.io.load(filename)
+    indices = ~numpy.isnan(feat).any(axis=1) #find the indices of invalid frames (they are set to False in the resulting array)
+    scores = numpy.ndarray((len(indices), 1), dtype='float64') 
+    scores[indices] = score_list[num_scores:num_scores + sum(indices)] # set the scores of the valid frames only
+    scores[~indices] = numpy.NaN # set NaN for the scores of the invalid frames
+    num_scores += sum(indices) # increase the number of valid scores that have been already maped
+    obj.save(scores, score_dir, '.hdf5') # save the scores
+   

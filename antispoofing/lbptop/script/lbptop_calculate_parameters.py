@@ -31,9 +31,9 @@ def main():
   ##########
 
   parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-  parser.add_argument('-v', '--input-dir', metavar='DIR', type=str, dest='inputDir', default=INPUT_DIR, help='Base directory containing the videos to be treated by this procedure (defaults to "%(default)s")')
+  parser.add_argument('input_dir', metavar='DIR', type=str, default=INPUT_DIR, help='Base directory containing the videos to be treated by this procedure (defaults to "%(default)s")')
 
-  parser.add_argument('-d', '--directory', dest="directory", default=OUTPUT_DIR, help="This path will be prepended to every file output by this procedure (defaults to '%(default)s')")
+  parser.add_argument('output_dir', metavar='DIR', default=OUTPUT_DIR, help="This path will be prepended to every file output by this procedure (defaults to '%(default)s')")
 
   parser.add_argument('-n', '--normface-size', dest="normfacesize", default=64, type=int, help="this is the size of the normalized face box if face normalization is used (defaults to '%(default)s')")
 
@@ -41,11 +41,10 @@ def main():
 
   parser.add_argument('-t', '--tan-triggs', dest='tan_triggs', action='store_true', default=False, help="Apply the Tan & Triggs algorithm before LBP-TOP")
 
-  parser.add_argument('-lXY', '--lbptypeXY', metavar='LBPTYPE', type=str, choices=('regular', 'riu2', 'uniform'), default='uniform', dest='lbptypeXY', help='Choose the type of LBP to use in the XY plane (defaults to "%(default)s")')
-
-  parser.add_argument('-lXT', '--lbptypeXT', metavar='LBPTYPE', type=str, choices=('regular', 'riu2', 'uniform'), default='uniform', dest='lbptypeXT', help='Choose the type of LBP to use in the XT plane (defaults to "%(default)s")')
-
-  parser.add_argument('-lYT', '--lbptypeYT', metavar='LBPTYPE', type=str, choices=('regular', 'riu2', 'uniform'), default='uniform', dest='lbptypeYT', help='Choose the type of LBP to use in the YT plane (defaults to "%(default)s")')
+  lbptype = ['regular', 'riu2', 'uniform']
+  parser.add_argument('-lXY', '--lbptypeXY', metavar='LBPTYPE', type=str, choices=lbptype, default='uniform', dest='lbptypeXY', help='Choose the type of LBP to use in the XY plane (defaults to "%(default)s"). Allowed values are: '+ str(lbptype))
+  parser.add_argument('-lXT', '--lbptypeXT', metavar='LBPTYPE', type=str, choices=lbptype, default='uniform', dest='lbptypeXT', help='Choose the type of LBP to use in the XT plane (defaults to "%(default)s"). Allowed values are: '+ str(lbptype))
+  parser.add_argument('-lYT', '--lbptypeYT', metavar='LBPTYPE', type=str, choices=lbptype, default='uniform', dest='lbptypeYT', help='Choose the type of LBP to use in the YT plane (defaults to "%(default)s"). Allowed values are: '+ str(lbptype))
 
 
   parser.add_argument('-nXY', '--neighborsXY', type=int, default=8, dest='nXY', help='Number of Neighbors in the XY plane (defaults to "%(default)s")')
@@ -56,21 +55,20 @@ def main():
   parser.add_argument('-rY', '--radiusY', type=int, default=1, dest='rY', help='Radius of the Y axis (defaults to "%(default)s")')
   parser.add_argument('-rT', '--radiusT', type=int, default=(1,), dest='rT', help='Set of radius of the T axis (defaults to "%(default)s")',choices=xrange(10), nargs='+')
 
-  parser.add_argument('-eXY', '--elbptypeXY', metavar='ELBPTYPE', type=str, choices=('regular', 'transitional', 'direction_coded','modified'),default='regular', dest='elbptypeXY', help='Choose the type of extended LBP features to compute in the XY plane (defaults to "%(default)s")')
+  elbptype = ['regular', 'transitional', 'direction_coded','modified']
+  parser.add_argument('-eXY', '--elbptypeXY', metavar='ELBPTYPE', type=str, choices=elbptype ,default='regular', dest='elbptypeXY', help='Choose the type of extended LBP features to compute in the XY plane (defaults to "%(default)s"). Allowed values are: '+ str(elbptype))
 
-  parser.add_argument('-eXT', '--elbptypeXT', metavar='ELBPTYPE', type=str, choices=('regular', 'transitional', 'direction_coded','modified'),default='regular', dest='elbptypeXT', help='Choose the type of extended LBP features to compute in the XT plane (defaults to "%(default)s")')
+  parser.add_argument('-eXT', '--elbptypeXT', metavar='ELBPTYPE', type=str, choices=elbptype, default='regular', dest='elbptypeXT', help='Choose the type of extended LBP features to compute in the XT plane (defaults to "%(default)s"). Allowed values are: '+ str(elbptype))
 
-  parser.add_argument('-eYT', '--elbptypeYT', metavar='ELBPTYPE', type=str, choices=('regular', 'transitional', 'direction_coded','modified'),default='regular', dest='elbptypeYT', help='Choose the type of extended LBP features to compute in the YT plane (defaults to "%(default)s")')
+  parser.add_argument('-eYT', '--elbptypeYT', metavar='ELBPTYPE', type=str, choices=elbptype ,default='regular', dest='elbptypeYT', help='Choose the type of extended LBP features to compute in the YT plane (defaults to "%(default)s"). Allowed values are: '+ str(elbptype))
 
   parser.add_argument('-cXY', '--circularXY', action='store_true', default=False, dest='cXY', help='Is circular neighborhood in XY plane?  (defaults to "%(default)s")')
   parser.add_argument('-cXT', '--circularXT', action='store_true', default=False, dest='cXT', help='Is circular neighborhood in XT plane?  (defaults to "%(default)s")')
   parser.add_argument('-cYT', '--circularYT', action='store_true', default=False, dest='cYT', help='Is circular neighborhood in YT plane?  (defaults to "%(default)s")')
 
-  parser.add_argument('-sC', '--saveConcat', action='store_true', default=False, dest='sC', help='If True, will create the feature vector out of the concatenated histograms and save it. If False, saves each of the three histograms (XY, XT and YT) in a separate plane in a numpy.array  (defaults to "%(default)s")')
-  
-  parser.add_argument('-sI', '--saveIndividually', action='store_true', default=False, dest='sI', help='If True, will save the feature vectors for each plane individually in separate directories (defaults to "%(default)s")')
-  
   parser.add_argument('-e', '--enrollment', action='store_true', default=False, dest='enrollment', help='If True, will do the processing of the enrollment data of the database (defaults to "%(default)s")')
+
+  parser.add_argument('-p', '--all-planes', action='store_true', default=False, dest='all_planes', help='Save 5 planes in different files (XY, XT, YT, XY-YT, XY-XT-YT), otherwise will save only the XY-XT-YT (defaults to "%(default)s")')
 
   # For SGE grid processing @ Idiap
   parser.add_argument('--grid', dest='grid', action='store_true', default=False, help=argparse.SUPPRESS)
@@ -85,8 +83,8 @@ def main():
 
   lbphistlength = {'regular':256, 'riu2':10, 'uniform':59} # hardcoding the number of bins for the LBP variants
 
-  inputDir  = args.inputDir
-  directory = args.directory
+  inputDir  = args.input_dir
+  directory = args.output_dir
 
   normfacesize    = args.normfacesize
   facesize_filter = args.facesize_filter
@@ -113,7 +111,10 @@ def main():
 
   tan_triggs = args.tan_triggs
 
-  maxRadius = max(rX,rY,max(rT)) #Getting the max radius to extract the volume for analysis
+  all_planes = args.all_planes
+
+  #maxRadius = max(rX,rY,max(rT)) #Getting the max radius to extract the volume for analysis
+  maxRadius = max(rT) #Getting the max radius to extract the volume for analysis
 
   ########################
   #Querying the database
@@ -176,7 +177,6 @@ def main():
     histVolumeXT = None
     histVolumeYT = None
     for i in range(maxRadius,nFrames-maxRadius):
-
       histLocalVolumeXY = None
       histLocalVolumeXT = None
       histLocalVolumeYT = None
@@ -185,15 +185,15 @@ def main():
       for r in rT:
         #The max local radius to select the volume
         maxLocalRadius = max(rX,rY,r)
-
+      
         #Select the volume to analyse
-        rangeValues = range(i-maxLocalRadius,i+1+maxLocalRadius)
+        rangeValues      = range(i-maxLocalRadius,i+1+maxLocalRadius)
         normalizedVolume = spoof.getNormFacesFromRange(grayFrames,rangeValues,locations,normfacesize)
 
         #Calculating the histograms           
         histXY,histXT,histYT = spoof.lbptophist(normalizedVolume,nXY,nXT,nYT,rX,rY,r,cXY,cXT,cYT,lbptypeXY,lbptypeXT,lbptypeYT,elbptypeXY,elbptypeXT,elbptypeYT)
         
-	#Concatenating in columns
+	    #Concatenating in columns
         if(histLocalVolumeXY == None):
           histLocalVolumeXY = histXY
           histLocalVolumeXT = histXT
@@ -203,7 +203,7 @@ def main():
           histLocalVolumeXT= numpy.concatenate((histLocalVolumeXT, histXT),axis=1)
           histLocalVolumeYT= numpy.concatenate((histLocalVolumeYT, histYT),axis=1)
 
-     #Concatenating in rows
+      #Concatenating in rows
       if(histVolumeXY == None):
         histVolumeXY= histLocalVolumeXY
         histVolumeXT= histLocalVolumeXT
@@ -233,36 +233,23 @@ def main():
     histVolumeXT = numpy.concatenate((histVolumeXT,nanParametersXT),axis=0)
     histVolumeYT = numpy.concatenate((histVolumeYT,nanParametersYT),axis=0)
 
-    #Saving the results into a file
-    maxDim = max(histVolumeXY.shape[1],histVolumeXT.shape[1],histVolumeYT.shape[1])
-    histData = numpy.zeros(shape=(4,histVolumeXY.shape[0],maxDim),dtype='float64')    
-  
-    #TODO: PROPOSE A BETTER SOLUTION TO STORE THE DIMENSIONS.
-    dims = numpy.zeros(shape=(histVolumeXY.shape[0],maxDim))
-    dims[0][0] = histVolumeXY.shape[1]  
-    dims[0][1] = histVolumeXT.shape[1]
-    dims[0][2] = histVolumeYT.shape[1]
-    histData[0] = dims
-    histData[1,:,0:dims[0][0]] = histVolumeXY
-    histData[2,:,0:dims[0][1]] = histVolumeXT
-    histData[3,:,0:dims[0][2]] = histVolumeYT
-
     sys.stdout.write('\n')
     sys.stdout.flush()
 
-    # saves the output
-    
-    if args.sI == True:
+    if(all_planes):
       obj.save(histVolumeXY, directory=os.path.join(directory, 'XY'), extension='.hdf5')
       obj.save(histVolumeXT, directory=os.path.join(directory, 'XT'), extension='.hdf5')
       obj.save(histVolumeYT, directory=os.path.join(directory, 'YT'), extension='.hdf5')
+
+      histVolumeXT_YT = numpy.hstack((histVolumeXT, histVolumeYT))
+      obj.save(histVolumeXT_YT, directory=os.path.join(directory, 'XT_YT'), extension='.hdf5')
+
+      histVolumeXY_XT_YT = numpy.hstack((histVolumeXY, histVolumeXT, histVolumeYT))
+      obj.save(histVolumeXY_XT_YT, directory=os.path.join(directory, 'XY_XT_YT'), extension='.hdf5')
     else:
-      if args.sC == True:
-        histDataConcat = numpy.hstack((histVolumeXY, histVolumeXT, histVolumeYT))
-        obj.save(histDataConcat,directory=directory,extension='.hdf5')  
-      else:
-        obj.save(histData,directory=directory,extension='.hdf5')
-  
+      histVolumeXY_XT_YT = numpy.hstack((histVolumeXY, histVolumeXT, histVolumeYT))
+      obj.save(histVolumeXY_XT_YT, directory=directory, extension='.hdf5')
+
 
   return 0
 

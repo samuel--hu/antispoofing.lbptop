@@ -30,9 +30,10 @@ def main():
 
   parser = argparse.ArgumentParser(description=__doc__,
       formatter_class=argparse.RawDescriptionHelpFormatter)
-  parser.add_argument('-i', '--input-dir', metavar='DIR', type=str, dest='inputDir', default=INPUT_DIR, help='Base directory containing the scores to be loaded')
 
-  parser.add_argument('-o', '--output-dir', metavar='DIR', type=str, dest='outputDir', default=OUTPUT_DIR, help='Base directory that will be used to save the results.')
+  parser.add_argument('input_dir', metavar='DIR', type=str, default=INPUT_DIR, help='Base directory containing the scores to be loaded')
+
+  parser.add_argument('output_dir', metavar='DIR', type=str, default=OUTPUT_DIR, help='Base directory that will be used to save the results.')
 
   parser.add_argument('-n', '--normalize', action='store_true', dest='normalize', default=False, help='If True, will do zero mean unit variance normalization on the data before creating the LDA machine')
 
@@ -42,20 +43,18 @@ def main():
 
   parser.add_argument('-v', '--verbose', action='store_true', dest='verbose', default=False, help='Increases this script verbosity')
 
+  parser.add_argument('-s', '--score', dest='score', action='store_true', default=False, help='If set, the final classification scores of all the frames will be dumped in a file')
+
   #######
   # Database especific configuration
   #######
   Database.create_parser(parser, implements_any_of='video')
 
-  # For SGE grid processing @ Idiap
-  parser.add_argument('--grid', dest='grid', action='store_true', default=False, help=argparse.SUPPRESS)
-
   args = parser.parse_args()
-  inputDir      = args.inputDir
-  outputDir     = args.outputDir
-  grid          = args.grid
+  inputDir      = args.input_dir
+  outputDir     = args.output_dir
   verbose       = args.verbose
-
+  score         = args.score
 
   if not os.path.exists(inputDir):
     parser.error("input directory does not exist")
@@ -67,9 +66,8 @@ def main():
   normalize     = args.normalize
   pca_reduction = args.pca_reduction
   
-  #models = ['XY-plane','XT-Plane','YT-Plane','XT-YT-Plane','XY-XT-YT-plane']
-  models = ['XY-XT-YT-plane','XY-plane','XT-Plane','YT-Plane','XT-YT-Plane']
-  lines  = ['r','b','y','g^','c']
+  ##models = ['XY-plane','XT-Plane','YT-Plane','XT-YT-Plane','XY-XT-YT-plane']
+  ##lines  = ['r','b','y','g^','c']
 
   #Normalization lowbound and highbound
   lowbound  = -1
@@ -84,47 +82,74 @@ def main():
   ##########################
   database = args.cls(args)
   trainReal, trainAttack = database.get_train_data()
+  devReal, devAttack = database.get_devel_data()
+  testReal, testAttack = database.get_test_data()
 
   # create the full datasets from the file data
-  train_real = calclbptop.create_full_dataset(trainReal,inputDir); train_attack = calclbptop.create_full_dataset(trainAttack,inputDir);
+  train_real_features = calclbptop.create_full_dataset(trainReal,inputDir); train_attack_features = calclbptop.create_full_dataset(trainAttack,inputDir); 
+  dev_real_features   = calclbptop.create_full_dataset(devReal,inputDir);   dev_attack_features   = calclbptop.create_full_dataset(devAttack,inputDir); 
+  test_real_features  = calclbptop.create_full_dataset(testReal,inputDir);  test_attack_features  = calclbptop.create_full_dataset(testAttack,inputDir); 
+
+  ##########################
+  # Training SVM
+  ##########################
+
+  if(verbose):
+    print "Training SVM machine..."
+
+  [svmMachine,pcaMachine,mins,maxs] = svmCountermeasure.train(train_real_features, train_attack_features, normalize=normalize, pca_reduction=pca_reduction,energy=energy)
+
+  #Saving the machines
+  if(pca_reduction):
+    hdf5File_pca = bob.io.HDF5File(os.path.join(outputDir, 'pca_machine_'+ str(energy) + '.txt'),openmode_string='w')
+    pcaMachine.save(hdf5File_pca)
+    del hdf5File_pca
+
+  svmMachine.save(os.path.join(outputDir, 'svm_machine.txt'))
+
+  #Saving the normalization factors
+  if(normalize):
+    fileName = os.path.join(outputDir, 'svm_normalization.txt')
+    svmCountermeasure.writeNormalizationData(fileName,lowbound,highbound,mins,maxs)
 
 
-  # Preparing for the grid environment
-  ranges = range(len(models))
-  if grid:
-    pos = int(os.environ['SGE_TASK_ID']) - 1
-    ranges = range(pos,pos+1)
-  
-  for i in ranges:
-    ##########################
-    # Training SVM
-    ##########################
+  if(pca_reduction):
+    train_real_features   = pca.pcareduce(pcaMachine, train_real)
+    train_attack_features = pca.pcareduce(pcaMachine, train_attack)
+    dev_real_features     = pca.pcareduce(pcaMachine, dev_real)
+    dev_attack_features   = pca.pcareduce(pcaMachine, dev_attack)
+    test_real_features    = pca.pcareduce(pcaMachine, test_real)
+    test_attack_features  = pca.pcareduce(pcaMachine, test_attack)
 
-    if(verbose):
-      print("Training the " + models[i])
+  train_real_out   = svmCountermeasure.svm_predict(svmMachine, train_real_features)
+  train_attack_out = svmCountermeasure.svm_predict(svmMachine, train_attack_features)
+  dev_real_out     = svmCountermeasure.svm_predict(svmMachine, dev_real_features)
+  dev_attack_out   = svmCountermeasure.svm_predict(svmMachine, dev_attack_features)
+  test_real_out    = svmCountermeasure.svm_predict(svmMachine, test_real_features)
+  test_attack_out  = svmCountermeasure.svm_predict(svmMachine, test_attack_features)
 
-    #Loading the plane data
-    train_real_plane   = train_real[i]
-    train_attack_plane = train_attack[i]
 
-    if(verbose):
-      print "Training SVM machine..."
+  # calculation of the error rates
+  thres              = bob.measure.eer_threshold(dev_attack_out.flatten(), dev_real_out.flatten())
+  dev_far, dev_frr   = bob.measure.farfrr(dev_attack_out.flatten(), dev_real_out.flatten(), thres)
+  test_far, test_frr = bob.measure.farfrr(test_attack_out.flatten(), test_real_out.flatten(), thres)
 
-    [svmMachine,pcaMachine,mins,maxs] = svmCountermeasure.train(train_real_plane, train_attack_plane, normalize=normalize, pca_reduction=pca_reduction,energy=energy)
-
-    #Saving the machines
-    if(pca_reduction):
-      hdf5File_pca = bob.io.HDF5File(os.path.join(outputDir, 'pca_machine_'+ str(energy) + '-' + models[i] +'.txt'),openmode_string='w')
-      pcaMachine.save(hdf5File_pca)
-      del hdf5File_pca
-
-    svmMachine.save(os.path.join(outputDir, 'svm_machine_'+ models[i] +'.txt'))
-
-    #Saving the normalization factors
-    if(normalize):
-      fileName = os.path.join(outputDir, 'svm_normalization_'+ models[i] +'.txt')
-      svmCountermeasure.writeNormalizationData(fileName,lowbound,highbound,mins,maxs)
-
+  # writing results to a file
+  tbl = []
+  tbl.append(" ")
+  if args.pca_reduction:
+    tbl.append("EER @devel - energy kept after PCA = %.2f" % (energy))
+  tbl.append(" threshold: %.4f" % thres)
+  tbl.append(" dev:  FAR %.2f%% (%d / %d) | FRR %.2f%% (%d / %d) | HTER %.2f%% " % \
+      (100*dev_far, int(round(dev_far*len(dev_attack_features))), len(dev_attack_features), 
+       100*dev_frr, int(round(dev_frr*len(dev_real_features))), len(dev_real_features),
+       50*(dev_far+dev_frr)))
+  tbl.append(" test: FAR %.2f%% (%d / %d) | FRR %.2f%% (%d / %d) | HTER %.2f%% " % \
+      (100*test_far, int(round(test_far*len(test_attack_features))), len(test_attack_features),
+       100*test_frr, int(round(test_frr*len(test_real_features))), len(test_real_features),
+       50*(test_far+test_frr)))
+  txt = ''.join([k+'\n' for k in tbl])
+  print txt
 
  
 if __name__ == '__main__':
